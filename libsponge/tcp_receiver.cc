@@ -12,18 +12,37 @@ using namespace std;
 
 void TCPReceiver::segment_received(const TCPSegment &seg) {
     // DUMMY_CODE(seg);
-    if(seg.header().syn)
+    if(!_syn)
     {
-        _syn=true;
-
+       if(seg.header().syn)
+       {
+            _syn=true;
+            _isn=seg.header().seqno; 
+       }else
+       {
+            return;
+       }
     }
-    if(_syn)//在接收到SYN报文之前的报文都是无效报文，需要丢弃不做处理
+    string data=seg.payload().copy();
+    
+    // uint64_t checkpoint=_reassembler.stream_out().bytes_written()+1;//写入的数据不包括SYN序号
+    // uint64_t index=unwrap(seg.header().seqno,_isn,checkpoint);//得到uint64_t，seg.header().seqno表示的是这个段的seqno，_isn表示的是这个连接开始的seqno 
+    
+    // index=index-1+(seg.header().syn);
+    uint64_t index;
+    if(_syn&&seg.header().syn)
     {
-        string data=seg.payload().copy();
-        _reassembler.push_substring(data,unwrap(seg.header().seqno,_isn,_checkpoint),seg.header().fin);
-        _checkpoint=_checkpoint+data.size()-_reassembler.unassembled_bytes();
-        _isn=wrap(_checkpoint,_isn);
-    }   
+        uint64_t checkpoint=_reassembler.stream_out().bytes_written();
+        index=unwrap(seg.header().seqno,_isn,checkpoint);
+        //第一个序列的seg.header().seqno等于isn，因此index返回为0
+    }else
+    {
+        uint64_t checkpoint=_reassembler.stream_out().bytes_written();
+        index=unwrap(seg.header().seqno-1,_isn,checkpoint);
+        //此时，若不减1，index返回为1，因此seg.header().seqno包含了一个syn等于1，因此将syn-1。此时index仍返回0，所以字母写入_reassembler的0处
+        //字节流中不包含SYN
+    }
+    _reassembler.push_substring(data,index,seg.header().fin);
 }
 
 optional<WrappingInt32> TCPReceiver::ackno() const { 
@@ -32,10 +51,15 @@ optional<WrappingInt32> TCPReceiver::ackno() const {
     {
         return nullopt;
     }
-    return wrap(1,_isn);
+    uint64_t n=_reassembler.stream_out().bytes_written()+1;//SYN占一个序列号
+    if(_reassembler.stream_out().input_ended())//FIN占一个序列号
+    {
+        n++;
+    }
+    return wrap(n,_isn);
 }
 
 size_t TCPReceiver::window_size() const { 
     // return {}; 
-    return _capacity-_reassembler.unassembled_bytes();
-    }
+    return _capacity-_reassembler.stream_out().buffer_size();
+}

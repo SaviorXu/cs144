@@ -45,7 +45,7 @@ uint64_t unwrap(WrappingInt32 n, WrappingInt32 isn, uint64_t checkpoint) {
     {
         gap=(standard-isn.raw_value())+n.raw_value();
     }
-    printf("gap=%u cpMod=%lu\n",gap,cpMod);
+    //printf("gap=%u cpMod=%lu\n",gap,cpMod);
     if(cpMod>gap)
     {
         uint64_t dis1=standard-cpMod+gap;

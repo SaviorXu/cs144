@@ -26,6 +26,7 @@ StreamReassembler::StreamReassembler(const size_t capacity) : _output(capacity),
 //! contiguous substrings and writes them into the output stream in order.
 void StreamReassembler::push_substring(const string &data, const size_t index, const bool eof) {
     //DUMMY_CODE(data, index, eof);
+
     if(index<=_nextIndex&&index+data.size()>_nextIndex)//重复接收
     {
         size_t st=_nextIndex-index;
