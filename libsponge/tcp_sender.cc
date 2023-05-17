@@ -22,17 +22,77 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const s
     , _initial_retransmission_timeout{retx_timeout}
     , _stream(capacity) {}
 
-uint64_t TCPSender::bytes_in_flight() const { return {}; }
+//有多少序列号被发送但尚未确认的段占用
+uint64_t TCPSender::bytes_in_flight() const { 
+    // return {};
+ 
+ }
 
-void TCPSender::fill_window() {}
+void TCPSender::fill_window() {
+    // string str="";
+    uint64_t sendsize=_stream.buffer_size()<_windowsize?_stream.buffer_size():_windowsize;
+    while(sendsize>0)
+    {
+        string str="";
+        int segpayload;
+        if(sendsize>TCPConfig::MAX_PAYLOAD_SIZE)
+        {
+            segpayload=TCPConfig::MAX_PAYLOAD_SIZE;
+        }else
+        {
+            segpayload=sendsize;
+        }
+        str+=_stream.peek_output(segpayload);
+        _stream.pop_output(segpayload);
+        sendsize-=segpayload;
+        _windowsize-=segpayload;
+        TCPSegment tcpseg;
+        tcpseg.parse(Buffer(std::move(str)));
+        if(_isn==next_seqno())
+        {
+            tcpseg.header().syn=true;
+        }
+        if(_stream.input_ended()&&sendsize==0)
+        {
+            tcpseg.header().fin=true;
+        }
+    }
+    // if(bsize<=_windowsize)
+    // {
+    //     str+=_stream.peek_output(bsize);
+    //     _stream.pop_output(bsize);
+    //     _windowsize-=bsize;
+    // }else
+    // {
+    //     str+=_stream.peek_output(_windowsize);
+    //     _stream.pop_output(_windowsize);
+    //     _windowsize=0;
+    // }
+    // TCPSegment tcpseg;
+}
 
 //! \param ackno The remote receiver's ackno (acknowledgment number)
 //! \param window_size The remote receiver's advertised window size
-void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) { DUMMY_CODE(ackno, window_size); }
+void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) { 
+    // DUMMY_CODE(ackno, window_size); 
+    _ackno=ackno;
+    _windowsize=window_size;
+    }
 
+//通知TCPSender时间的流逝
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
-void TCPSender::tick(const size_t ms_since_last_tick) { DUMMY_CODE(ms_since_last_tick); }
+void TCPSender::tick(const size_t ms_since_last_tick) { 
+    // DUMMY_CODE(ms_since_last_tick); 
+    // if(ms_since_last_tick>_initial_retransmission_timeout)
+    // {
 
-unsigned int TCPSender::consecutive_retransmissions() const { return {}; }
+    // }
+}
+
+//连续重传的次数
+unsigned int TCPSender::consecutive_retransmissions() const { 
+    // return {};
+
+    }
 
 void TCPSender::send_empty_segment() {}

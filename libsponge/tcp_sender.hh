@@ -21,6 +21,7 @@ class TCPSender {
     WrappingInt32 _isn;
 
     //! outbound queue of segments that the TCPSender wants sent
+    //TCPSender想要发送的出站队列
     std::queue<TCPSegment> _segments_out{};
 
     //! retransmission timer for the connection
@@ -31,6 +32,9 @@ class TCPSender {
 
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
+
+    WrappingInt32 _ackno;
+    uint16_t _windowsize;
 
   public:
     //! Initialize a TCPSender
@@ -69,6 +73,7 @@ class TCPSender {
     size_t bytes_in_flight() const;
 
     //! \brief Number of consecutive retransmissions that have occurred in a row
+    //连续重传的次数
     unsigned int consecutive_retransmissions() const;
 
     //! \brief TCPSegments that the TCPSender has enqueued for transmission.
