@@ -64,7 +64,7 @@ void ByteStream::end_input() {
 
 bool ByteStream::input_ended() const {
      //return {};
-     //返回input是否结束
+     //是否读入结束
      return _eof;
     }
 
@@ -86,7 +86,7 @@ bool ByteStream::buffer_empty() const {
 
 bool ByteStream::eof() const { 
     //return false; 
-    //用户的input已经结束，且已经没有数据可读。
+    //读入结束，且缓冲区也没有数据
     //true if the output has reached the ending
     return _buffer.empty()&&_eof;
 }

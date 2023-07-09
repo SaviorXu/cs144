@@ -5,10 +5,12 @@
 #include "tcp_config.hh"
 #include "tcp_segment.hh"
 #include "wrapping_integers.hh"
+#include "timer.hh"
 
 #include <functional>
 #include <queue>
-#include <map>
+#include<iostream>
+
 
 //! \brief The "sender" part of a TCP implementation.
 
@@ -24,18 +26,25 @@ class TCPSender {
     //! outbound queue of segments that the TCPSender wants sent
     //TCPSender想要发送的出站队列
     std::queue<TCPSegment> _segments_out{};
-    std::map<WrappingInt32,TCPSegment> _resend;
+    std::queue<TCPSegment> _resend{};//需要重复发送的队列
 
     //! retransmission timer for the connection
     unsigned int _initial_retransmission_timeout;
+    unsigned int _retrans_timeout;
 
     //! outgoing stream of bytes that have not yet been sent
     ByteStream _stream;
 
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
-    uint64_t _alreadySend;
-    uint16_t _window_size;
+    size_t _alreadySend;
+    size_t _window_size;
+    Timer _timer;
+    uint16_t _retrans_times;//重传次数
+
+    enum TCPState{CLOSED,SYN_SENT,SYN_ACKED,FIN_SENT,FIN_ACKED};
+    TCPState _state{CLOSED};
+
 
 
   public:
