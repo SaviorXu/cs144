@@ -11,6 +11,7 @@ void DUMMY_CODE(Targs &&... /* unused */) {}
 using namespace std;
 
 void TCPReceiver::segment_received(const TCPSegment &seg) {
+    // printf("tcp_receiver:segment_received;seg.seqno=%u _isn=%u\n",seg.header().seqno.raw_value(),_isn.raw_value());
     // DUMMY_CODE(seg);
     if(!_syn)
     {
@@ -35,13 +36,18 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
         uint64_t checkpoint=_reassembler.stream_out().bytes_written();
         index=unwrap(seg.header().seqno,_isn,checkpoint);
         //第一个序列的seg.header().seqno等于isn，因此index返回为0
-    }else
+    }else if(_syn&&seg.header().seqno.raw_value()<=_isn.raw_value())
+    {
+        return;
+    }
+    else
     {
         uint64_t checkpoint=_reassembler.stream_out().bytes_written();
         index=unwrap(seg.header().seqno-1,_isn,checkpoint);
         //此时，若不减1，index返回为1，因此seg.header().seqno包含了一个syn等于1，因此将syn-1。此时index仍返回0，所以字母写入_reassembler的0处
         //字节流中不包含SYN
     }
+    // printf("index=%lu\n",index);
     _reassembler.push_substring(data,index,seg.header().fin);
 }
 

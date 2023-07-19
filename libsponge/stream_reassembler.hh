@@ -16,6 +16,7 @@ class StreamReassembler {
     ByteStream _output;  //!< The reassembled in-order byte stream
     size_t _capacity;    //!< The maximum number of bytes
     size_t _nextIndex;
+    //第一个元素表示下标
     std::map<size_t,char> _notAssem={};
     bool _eof;
     size_t _eof_pos;

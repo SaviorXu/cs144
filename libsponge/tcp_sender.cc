@@ -42,7 +42,9 @@ void TCPSender::fill_window() {
 
     size_t window_size=_window_size;
     if(_state==CLOSED && next_seqno_absolute()==0)//第一次握手，发送SYN，但不携带数据
-    {//当ack_recv处，接收到对该SYN的ack时，会将状态改变。
+    {
+        // printf("tcp_sender:send SYN\n");
+        //当ack_recv处，接收到对该SYN的ack时，会将状态改变。
         TCPSegment tcpseg;
         //处于CLOSED状态，发送SYN包
         tcpseg.header().syn=true;
@@ -57,11 +59,12 @@ void TCPSender::fill_window() {
     }
     if(_state==SYN_ACKED)
     {
+        // printf("_stream._capacity=%ld\n",_stream.remaining_capacity());
         if(window_size==0)
         {
             window_size=1;//若在此处直接用_window_size=1.则会出现问题。当窗口设为0时，假设窗口为1.但是不能改变超时重传时间。若直接将_window_size=1。则在超时重传处会将时间加倍。
         }
-        //stream.input_ended()表示已经读完，但buffer里面可能还有数据
+        //stream.input_ended()表示应用层的数据已经读完，但buffer里面可能还有数据
         if((!_stream.eof())||(_stream.input_ended()&&_stream.buffer_size()+_alreadySend<=window_size))//还有数据要发送
         {
             uint16_t sendSize=_stream.buffer_size()>(window_size-_alreadySend)?(window_size-_alreadySend):_stream.buffer_size();
@@ -82,6 +85,7 @@ void TCPSender::fill_window() {
                     _state=FIN_SENT;
                     _next_seqno+=1;
                     _alreadySend+=1;
+                    // _retrans_timeout=_initial_retransmission_timeout;
                 }
                 _resend.push(tcpseg);
                 _segments_out.push(tcpseg);
@@ -91,6 +95,7 @@ void TCPSender::fill_window() {
                 }
             }
         }
+        //_stream.eof()表示应用层数据已经发送完，且buffer缓冲区已经没有数据
         if(_state==SYN_ACKED&&_stream.eof()&&next_seqno_absolute()<_stream.bytes_written()+2&&window_size>=1+_alreadySend)//没有数据要发送
         {
             //printf("FIN _stream.buffer_size=%ld\n",_stream.buffer_size());
@@ -103,6 +108,7 @@ void TCPSender::fill_window() {
             _segments_out.push(tcpseg);
             _resend.push(tcpseg);
             _state=FIN_SENT;
+            // _retrans_timeout=_initial_retransmission_timeout;
         }
     }
     
@@ -116,6 +122,7 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
     // DUMMY_CODE(ackno, window_size); 
     //当接收者给发送者一个信号，表示接收到最近的消息，重置RTO，
     
+    // printf("ack_received retrans_timeout=%u\n",_retrans_timeout);
     if(unwrap(ackno,_isn,_next_seqno)>_next_seqno)
     {
         return;
@@ -125,30 +132,32 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
     _window_size=window_size;
     if(_state==SYN_SENT && ackno==wrap(1,_isn))
     {
-        // printf("_syn==1\n");
+        // printf("ack_received _state=SYN_ACKED _syn==1\n");
         _state=SYN_ACKED;
         // _resend.pop();
     }
 
-    TCPSegment tcp=_resend.front();
-    auto initial=unwrap(tcp.header().seqno,_isn,_next_seqno)+tcp.length_in_sequence_space();
-    auto ack=unwrap(ackno,_isn,_next_seqno);
-    while(initial<=ack)
+    //此处必须判断_resend.empty()是否为空。否则会出现断错误
+    if(!_resend.empty())
     {
-        // printf("_syn==1\n");
-        printf("initial=%ld ack=%ld\n",initial,ack);
-        _alreadySend-=tcp.length_in_sequence_space();
-        _resend.pop();
-        has_new=true;
-
-        if(_resend.empty())
+        TCPSegment tcp=_resend.front();
+        auto initial=unwrap(tcp.header().seqno,_isn,_next_seqno)+tcp.length_in_sequence_space();
+        auto ack=unwrap(ackno,_isn,_next_seqno);
+        while(initial<=ack)
         {
-            break;
-        }
-        
-        tcp=_resend.front();
-        initial=unwrap(tcp.header().seqno,_isn,_next_seqno)+tcp.length_in_sequence_space();
+            // printf("_syn==1\n");
+            // printf("initial=%ld ack=%ld\n",initial,ack);
+            _alreadySend-=tcp.length_in_sequence_space();
+            _resend.pop();
+            has_new=true;
 
+            if(_resend.empty())
+            {
+                break;
+            }
+            tcp=_resend.front();
+            initial=unwrap(tcp.header().seqno,_isn,_next_seqno)+tcp.length_in_sequence_space();
+        }
     }
     if(has_new)
     {
@@ -167,21 +176,28 @@ void TCPSender::tick(const size_t ms_since_last_tick) {
     if(_timer.isStart())
     {
         _timer.addDuration(ms_since_last_tick);
-        printf("getDuration=%ld _retrans_timeout=%d\n",_timer.getDuration(),_retrans_timeout);
+        // printf("getDuration=%ld _retrans_timeout=%d\n",_timer.getDuration(),_retrans_timeout);
         if(_timer.getDuration()>=_retrans_timeout)
         {
-            printf("retrans\n");
+            // printf("retrans\n");
             //超时之后，需要重新传送最早的未被确认的片段。
             //若窗口大小不为0，连续重传次数+1，RTO*2
             if(!_resend.empty())
             {
+                // printf("retrans send segment\n");
                 _segments_out.push(_resend.front());
+                //当有需要重传的报文且对方可以收时，才需要将超时重传时间设置为2倍。
+                if(_window_size>0)//若初始化时，将窗口设为0。当发送SYN报文时，超时并不会加倍，因此初始时应将窗口设为1
+                {
+                    _retrans_times+=1;
+                    _retrans_timeout<<=1;
+                } 
             }
-            if(_window_size!=0)//若初始化时，将窗口设为0。当发送SYN报文时，超时并不会加倍，因此初始时应将窗口设为1
-            {
-                _retrans_times+=1;
-                _retrans_timeout<<=1;
-            } 
+            // if(_window_size>0)//若初始化时，将窗口设为0。当发送SYN报文时，超时并不会加倍，因此初始时应将窗口设为1
+            // {
+            //     _retrans_times+=1;
+            //     _retrans_timeout<<=1;
+            // } 
             _timer.reset();       
         }
         

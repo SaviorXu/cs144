@@ -22,6 +22,7 @@ static constexpr unsigned NREPS = 32;
 
 int main() {
     try {
+        printf("fsm_loopback_win\n");
         TCPConfig cfg{};
         cfg.recv_capacity = 65000;
         auto rd = get_random_generator();
@@ -72,6 +73,7 @@ int main() {
             test_2.execute(ExpectData{}.with_data(d), "test 2 failed: wrong data after loopback");
         }
     } catch (const exception &e) {
+        printf("fsm_loopback_win:catch\n");
         cerr << e.what() << endl;
         return EXIT_FAILURE;
     }

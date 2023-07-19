@@ -25,6 +25,7 @@ static constexpr unsigned MIN_SWIN_MUL = 2;
 static constexpr unsigned MAX_SWIN_MUL = 6;
 
 int main() {
+    // printf("fsm_winsize\n");
     try {
         auto rd = get_random_generator();
         TCPConfig cfg{};
@@ -64,6 +65,7 @@ int main() {
             string d_out(swin_mul * swin, 0);
             size_t bytes_total = 0;
             while (bytes_total < swin_mul * swin) {
+                // printf("bytes_total=%ld swin_mul*swin=%d\n",bytes_total,swin_mul*swin);
                 test_1.execute(ExpectSegmentAvailable{}, "test 1 failed: nothing sent after write()");
                 size_t bytes_read = 0;
                 while (test_1.can_read()) {
@@ -92,6 +94,6 @@ int main() {
         cerr << e.what() << endl;
         return err_num;
     }
-
+    // printf("fsm_winsize finish\n");
     return EXIT_SUCCESS;
 }

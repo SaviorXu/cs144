@@ -14,11 +14,13 @@ using namespace std;
 using State = TCPTestHarness::State;
 
 int main() {
+    // printf("main\n");
     try {
         TCPConfig cfg{};
 
         // test #1: start in TIME_WAIT, timeout
         {
+            // printf("fsm_active_close1\n");
             TCPTestHarness test_1 = TCPTestHarness::in_time_wait(cfg);
 
             test_1.execute(Tick(10 * cfg.rt_timeout - 1));
@@ -36,6 +38,7 @@ int main() {
 
         // test #2: start in CLOSING, send ack, time out
         {
+            // printf("fsm_active_close2\n");
             TCPTestHarness test_2 = TCPTestHarness::in_closing(cfg);
 
             test_2.execute(Tick(4 * cfg.rt_timeout));
@@ -58,6 +61,7 @@ int main() {
 
         // test #3: start in FIN_WAIT_2, send FIN, time out
         {
+            // printf("fsm_active_close3\n");
             TCPTestHarness test_3 = TCPTestHarness::in_fin_wait_2(cfg);
 
             test_3.execute(Tick(4 * cfg.rt_timeout));
@@ -81,6 +85,7 @@ int main() {
 
         // test #4: start in FIN_WAIT_1, ack, FIN, time out
         {
+            // printf("fsm_active_close4\n");
             TCPTestHarness test_4 = TCPTestHarness::in_fin_wait_1(cfg);
 
             // Expect retransmission of FIN

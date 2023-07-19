@@ -20,15 +20,15 @@ TCPState::TCPState(const TCPState::State state) {
             _receiver = TCPReceiverStateSummary::LISTEN;
             _sender = TCPSenderStateSummary::CLOSED;
             break;
-        case TCPState::State::SYN_RCVD:
+        case TCPState::State::SYN_RCVD://接收到SYN,发送了SYN
             _receiver = TCPReceiverStateSummary::SYN_RECV;
             _sender = TCPSenderStateSummary::SYN_SENT;
             break;
-        case TCPState::State::SYN_SENT:
+        case TCPState::State::SYN_SENT://发送SYN
             _receiver = TCPReceiverStateSummary::LISTEN;
             _sender = TCPSenderStateSummary::SYN_SENT;
             break;
-        case TCPState::State::ESTABLISHED:
+        case TCPState::State::ESTABLISHED://接收SYN，发送了ACK
             _receiver = TCPReceiverStateSummary::SYN_RECV;
             _sender = TCPSenderStateSummary::SYN_ACKED;
             break;

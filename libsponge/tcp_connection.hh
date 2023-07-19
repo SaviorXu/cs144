@@ -19,7 +19,15 @@ class TCPConnection {
     //! Should the TCPConnection stay active (and keep ACKing)
     //! for 10 * _cfg.rt_timeout milliseconds after both streams have ended,
     //! in case the remote TCPConnection doesn't know we've received its whole stream?
+    //是否处于2msl的等待状态
     bool _linger_after_streams_finish{true};
+
+    size_t _last_segment_time{0};
+
+    bool _isActive{true};
+
+    void sendRst();
+    void sendSeg();
 
   public:
     //! \name "Input" interface for the writer
@@ -81,7 +89,8 @@ class TCPConnection {
     //!@}
 
     //! Construct a new connection from a configuration
-    explicit TCPConnection(const TCPConfig &cfg) : _cfg{cfg} {}
+    explicit TCPConnection(const TCPConfig &cfg) : _cfg{cfg} {
+    }
 
     //! \name construction and destruction
     //! moving is allowed; copying is disallowed; default construction not possible
@@ -95,5 +104,4 @@ class TCPConnection {
     TCPConnection &operator=(const TCPConnection &other) = delete;
     //!@}
 };
-
 #endif  // SPONGE_LIBSPONGE_TCP_FACTORED_HH

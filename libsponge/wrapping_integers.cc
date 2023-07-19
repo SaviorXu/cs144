@@ -32,6 +32,7 @@ WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
 //! and the other stream runs from the remote TCPSender to the local TCPReceiver and
 //! has a different ISN.
 //convert seqno -> absolute seqno
+
 uint64_t unwrap(WrappingInt32 n, WrappingInt32 isn, uint64_t checkpoint) {
     uint64_t cp=checkpoint & (0xffffffff00000000);
     uint64_t cpMod= checkpoint & (0x00000000ffffffff);
@@ -52,11 +53,11 @@ uint64_t unwrap(WrappingInt32 n, WrappingInt32 isn, uint64_t checkpoint) {
         uint64_t dis2=cpMod-gap;
         if(dis1>dis2)
         {
-            printf(">\n");
+            // printf(">\n");
             ret=checkpoint-dis2;
         }else
         {
-            printf("< dis2=%lu\n",dis2);
+            // printf("< dis2=%lu\n",dis2);
             ret=checkpoint+dis1;
         }
     }else if(cpMod<gap)
@@ -82,3 +83,11 @@ uint64_t unwrap(WrappingInt32 n, WrappingInt32 isn, uint64_t checkpoint) {
     }
     return ret;
 }
+// uint64_t unwrap(WrappingInt32 n, WrappingInt32 isn, uint64_t checkpoint) {
+//     printf("n=%u isn=%u\n",n.raw_value(),isn.raw_value());
+//     int32_t offset = static_cast<uint32_t>(checkpoint) - (n - isn);
+//     printf("n-isn=%d\n",(n-isn));
+//     int64_t result = checkpoint - offset;
+//     return result >= 0 ? result : result + (1UL << 32);
+// }
+

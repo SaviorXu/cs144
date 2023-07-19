@@ -26,7 +26,13 @@ StreamReassembler::StreamReassembler(const size_t capacity) : _output(capacity),
 //! contiguous substrings and writes them into the output stream in order.
 void StreamReassembler::push_substring(const string &data, const size_t index, const bool eof) {
     //DUMMY_CODE(data, index, eof);
-
+    // printf("_nextIndex=%lu index=%lu capacity=%lu\n",_nextIndex,index,_capacity);
+    //接收到的报文的序号不能超过缓冲区可容纳的大小
+    if(index>=_nextIndex+_output.remaining_capacity())
+    {
+        // printf("streamReassembler return\n");
+        return;
+    }
     if(index<=_nextIndex&&index+data.size()>_nextIndex)//重复接收
     {
         size_t st=_nextIndex-index;
