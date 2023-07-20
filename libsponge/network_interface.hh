@@ -7,6 +7,7 @@
 
 #include <optional>
 #include <queue>
+#include<map>
 
 //! \brief A "network interface" that connects IP (the internet layer, or network layer)
 //! with Ethernet (the network access layer, or link layer).
@@ -39,6 +40,10 @@ class NetworkInterface {
 
     //! outbound queue of Ethernet frames that the NetworkInterface wants sent
     std::queue<EthernetFrame> _frames_out{};
+    std::map<uint32_t,std::pair<EthernetAddress,int>> _storage{};
+    std::map<uint32_t,InternetDatagram> _wait_send{};
+    std::map<uint32_t,std::pair<EthernetFrame,int>> _arp_storage{};
+    int _duration;
 
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses
@@ -62,6 +67,9 @@ class NetworkInterface {
 
     //! \brief Called periodically when time elapses
     void tick(const size_t ms_since_last_tick);
+
+    void send_arp_req(const InternetDatagram &dgram, const uint32_t &next_hop_ip);
+    void send_ether_pack(const InternetDatagram &dgram, const uint32_t &next_hop_ip);
 };
 
 #endif  // SPONGE_LIBSPONGE_NETWORK_INTERFACE_HH
