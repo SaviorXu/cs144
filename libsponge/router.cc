@@ -29,14 +29,53 @@ void Router::add_route(const uint32_t route_prefix,
     cerr << "DEBUG: adding route " << Address::from_ipv4_numeric(route_prefix).ip() << "/" << int(prefix_length)
          << " => " << (next_hop.has_value() ? next_hop->ip() : "(direct)") << " on interface " << interface_num << "\n";
 
-    DUMMY_CODE(route_prefix, prefix_length, next_hop, interface_num);
+    // DUMMY_CODE(route_prefix, prefix_length, next_hop, interface_num);
     // Your code here.
+    RouterElem elem(route_prefix,prefix_length,next_hop,interface_num);
+    RouterVec.push_back(elem);
+}
+
+uint32_t preLen2num(uint8_t preLen)
+{
+    uint32_t sum=0;
+    int st=32-preLen;
+    for(int i=st;i<32;i++)
+    {
+        sum+=(1<<i);
+    }
+    return sum;
 }
 
 //! \param[in] dgram The datagram to be routed
 void Router::route_one_datagram(InternetDatagram &dgram) {
-    DUMMY_CODE(dgram);
+    // DUMMY_CODE(dgram);
     // Your code here.
+    bool flag=false;
+    size_t index=-1;
+    uint8_t max_len=0;
+    for(size_t i=0;i<RouterVec.size();i++)
+    {
+        std::cout<<Address::from_ipv4_numeric(preLen2num(RouterVec[i].prefix_length)).ip()<<" "<<Address::from_ipv4_numeric(dgram.header().dst).ip()<<" "<<Address::from_ipv4_numeric(RouterVec[i].route_prefix).ip()<<std::endl;
+        if(((preLen2num(RouterVec[i].prefix_length)&dgram.header().dst)==RouterVec[i].route_prefix)&&max_len<=RouterVec[i].prefix_length)
+        {
+            max_len=RouterVec[i].prefix_length;
+            index=i;
+            flag=true;
+        }
+    }
+    if(flag)
+    {
+        if(dgram.header().ttl<=1)
+        {
+            return;
+        }else
+        {
+            dgram.header().ttl-=1;
+            Address next_hop=RouterVec[index].next_hop.has_value()?RouterVec[index].next_hop.value():Address::from_ipv4_numeric(dgram.header().dst);
+            interface(RouterVec[index].interface_num).send_datagram(dgram,next_hop);
+        }
+    }
+    return;
 }
 
 void Router::route() {
